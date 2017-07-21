@@ -87,6 +87,9 @@ public enum PropertyKey {
   UNDERFS_S3A_SERVER_SIDE_ENCRYPTION_ENABLED(Name.UNDERFS_S3A_SERVER_SIDE_ENCRYPTION_ENABLED,
       false),
   UNDERFS_S3A_SOCKET_TIMEOUT_MS(Name.UNDERFS_S3A_SOCKET_TIMEOUT_MS, 50000),
+  UNDERFS_QINGSTOR_CONN_TIMEOUT_MS(Name.UNDERFS_QINGSTOR_CONN_TIMEOUT_MS, 600),
+  UNDERFS_QINGSTOR_READ_TIMEOUT_MS(Name.UNDERFS_QINGSTOR_READ_TIMEOUT_MS, 600),
+  UNDERFS_QINGSTOR_WRITE_TIMEOUT_MS(Name.UNDERFS_QINGSTOR_WRITE_TIMEOUT_MS, 600),
 
   //
   // UFS access control related properties
@@ -485,7 +488,12 @@ public enum PropertyKey {
     public static final String UNDERFS_S3_THREADS_MAX = "alluxio.underfs.s3.threads.max";
     public static final String UNDERFS_S3_UPLOAD_THREADS_MAX =
         "alluxio.underfs.s3.upload.threads.max";
-
+    public static final String UNDERFS_QINGSTOR_CONN_TIMEOUT_MS =
+        "alluxio.underfs.qingstor.conn.timeout.ms";
+    public static final String UNDERFS_QINGSTOR_READ_TIMEOUT_MS =
+            "alluxio.underfs.qingstor.read.timeout.ms";
+    public static final String UNDERFS_QINGSTOR_WRITE_TIMEOUT_MS =
+            "alluxio.underfs.qingstor.write.timeout.ms";
     //
     // UFS access control related properties
     //

@@ -21,7 +21,9 @@ import alluxio.util.io.PathUtils;
 
 import com.google.common.base.Preconditions;
 import com.qingstor.sdk.config.EvnContext;
+import com.qingstor.sdk.constants.QSConstant;
 import com.qingstor.sdk.exception.QSException;
+import com.qingstor.sdk.request.QSOkHttpRequestClient;
 import com.qingstor.sdk.service.Bucket;
 import com.qingstor.sdk.service.QingStor;
 import com.qingstor.sdk.service.Types;
@@ -35,7 +37,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 
@@ -91,6 +92,19 @@ public class QingstorUnderFileSystem extends ObjectUnderFileSystem {
 
     // get Qingstor service
     EvnContext evn = new EvnContext(accessId, accessKey);
+    evn.setProtocol("http");
+
+    // set Qingstor timeout
+    QSConstant.HTTPCLIENT_CONNECTION_TIME_OUT = Configuration.getInt(PropertyKey.UNDERFS_QINGSTOR_CONN_TIMEOUT_MS);
+    QSConstant.HTTPCLIENT_READ_TIME_OUT = Configuration.getInt(PropertyKey.UNDERFS_QINGSTOR_READ_TIMEOUT_MS);
+    QSConstant.HTTPCLIENT_WRITE_TIME_OUT = Configuration.getInt(PropertyKey.UNDERFS_QINGSTOR_WRITE_TIMEOUT_MS);
+
+    QSOkHttpRequestClient.getInstance().intiOkHttpClient();
+
+    LOG.info("UNDERFS_QINGSTOR_CONN_TIMEOUT_MS set to: {}", QSConstant.HTTPCLIENT_CONNECTION_TIME_OUT);
+    LOG.info("UNDERFS_QINGSTOR_READ_TIMEOUT_MS set to: {}", QSConstant.HTTPCLIENT_READ_TIME_OUT);
+    LOG.info("UNDERFS_QINGSTOR_WRITE_TIMEOUT_MS set to: {}", QSConstant.HTTPCLIENT_WRITE_TIME_OUT);
+
     QingStor qingstorClient = new QingStor(evn, zone);
 
     // get Qingstor bucket

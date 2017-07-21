@@ -17,6 +17,7 @@ import java.io.InputStream;
 
 import javax.annotation.concurrent.NotThreadSafe;
 
+import com.qingstor.sdk.constants.QSConstant;
 import com.qingstor.sdk.exception.QSException;
 import com.qingstor.sdk.service.Bucket;
 
@@ -74,6 +75,10 @@ public class QingstorInputStream extends MultiRangeObjectInputStream {
 
   @Override
   protected InputStream createStream(long startPos, long endPos) throws IOException {
+    LOG.info("Create Qingstor inStream with timeout setting {}/{}/{}",
+            QSConstant.HTTPCLIENT_CONNECTION_TIME_OUT,
+            QSConstant.HTTPCLIENT_READ_TIME_OUT,
+            QSConstant.HTTPCLIENT_WRITE_TIME_OUT);
     Bucket.GetObjectInput input = new Bucket.GetObjectInput();
     // OSS returns entire object if we read past the end
     long rangeEnd = endPos < mContentLength ? endPos - 1 : mContentLength - 1;
