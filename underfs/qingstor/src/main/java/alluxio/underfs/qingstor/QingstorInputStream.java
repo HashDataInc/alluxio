@@ -75,15 +75,14 @@ public class QingstorInputStream extends MultiRangeObjectInputStream {
 
   @Override
   protected InputStream createStream(long startPos, long endPos) throws IOException {
-    LOG.info("Create Qingstor inStream with timeout setting {}/{}/{}",
-            QSConstant.HTTPCLIENT_CONNECTION_TIME_OUT,
-            QSConstant.HTTPCLIENT_READ_TIME_OUT,
-            QSConstant.HTTPCLIENT_WRITE_TIME_OUT);
+
     Bucket.GetObjectInput input = new Bucket.GetObjectInput();
-    // OSS returns entire object if we read past the end
+
+    // build range of GetObjectInput
     long rangeEnd = endPos < mContentLength ? endPos - 1 : mContentLength - 1;
     String range = "bytes=" + String.valueOf(startPos) + "-" + String.valueOf(rangeEnd);
     input.setRange(range);
+
     try {
       Bucket.GetObjectOutput qingstorObject = mBucket.getObject(mKey, input);
       return new BufferedInputStream(qingstorObject.getBodyInputStream());
