@@ -80,6 +80,7 @@ public final class Constants {
   public static final String HEADER_S3A = "s3a://";
   public static final String HEADER_SWIFT = "swift://";
   public static final String HEADER_QINGSTOR = "qingstor://";
+  public static final String HEADER_TXCOS = "txcos://";
   // Google Cloud Storage header convention is "gs://".
   // See https://cloud.google.com/storage/docs/cloud-console
   public static final String HEADER_GCS = "gs://";

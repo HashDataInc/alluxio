@@ -29,6 +29,7 @@
     <module>local</module>
     <module>oss</module>
     <module>qingstor</module>
+    <module>txcos</module>
     <module>s3</module>
     <module>s3a</module>
     <module>swift</module>
