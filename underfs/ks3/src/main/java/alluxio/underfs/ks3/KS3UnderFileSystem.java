@@ -9,7 +9,7 @@
  * See the NOTICE file distributed with this work for information regarding copyright ownership.
  */
 
-package alluxio.underfs.txcos;
+package alluxio.underfs.ks3;
 
 import alluxio.AlluxioURI;
 import alluxio.Configuration;
@@ -22,14 +22,17 @@ import alluxio.util.io.PathUtils;
 
 import com.google.common.base.Preconditions;
 
-import com.qcloud.cos.COSClient;
-import com.qcloud.cos.ClientConfig;
-import com.qcloud.cos.auth.COSCredentials;
-import com.qcloud.cos.auth.BasicCOSCredentials;
-import com.qcloud.cos.model.*;
-import com.qcloud.cos.region.Region;
-import com.qcloud.cos.utils.*;
-import com.qcloud.cos.exception.*;
+import com.ksyun.ks3.dto.*;
+import com.ksyun.ks3.service.Ks3Client;
+import com.ksyun.ks3.exception.Ks3ServiceException;
+import com.ksyun.ks3.service.Ks3ClientConfig;
+import com.ksyun.ks3.service.Ks3ClientConfig.PROTOCOL;
+import com.ksyun.ks3.service.Ks3;
+import com.ksyun.ks3.http.HttpClientConfig;
+import com.ksyun.ks3.service.request.GetObjectRequest;
+import com.ksyun.ks3.utils.Base64;
+import com.ksyun.ks3.exception.Ks3ClientException;
+import com.ksyun.ks3.service.request.ListObjectsRequest;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.slf4j.Logger;
@@ -40,9 +43,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.Set;
 
-public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
-  private static final Logger LOG = LoggerFactory.getLogger(TXCOSUnderFileSystem.class);
+public class KS3UnderFileSystem extends ObjectUnderFileSystem {
+  private static final Logger LOG = LoggerFactory.getLogger(KS3UnderFileSystem.class);
 
   /** Suffix for an empty file to flag it as a directory. */
   private static final String FOLDER_SUFFIX = "_$folder$";
@@ -50,13 +54,13 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
   /** Static hash for a directory's empty contents. */
   private static final String DIR_HASH;
 
-  /** TXCOS service. */
-  private final COSClient mClient;
+  /** KS3 service. */
+  private final Ks3 mClient;
 
   /** Bucket name of user's configured Alluxio bucket. */
   private final String mBucketName;
 
-  /** The name of the TXCOS bucket owner. */
+  /** The name of the KS3 bucket owner. */
   private final String mOwner;
 
   /** The permission mode that the account owner has to the bucket. */
@@ -68,46 +72,54 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
   }
 
   /**
-   * Constructs a new instance of {@link TXCOSUnderFileSystem}.
+   * Constructs a new instance of {@link KS3UnderFileSystem}.
    *
    * @param uri the {@link AlluxioURI} for this UFS
-   * @return the created {@link TXCOSUnderFileSystem} instance
+   * @return the created {@link KS3UnderFileSystem} instance
    * @throws Exception when a connection to GCS could not be created
    */
-  public static TXCOSUnderFileSystem createInstance(AlluxioURI uri,
-      UnderFileSystemConfiguration conf) throws Exception {
+  public static KS3UnderFileSystem createInstance(AlluxioURI uri,
+                                                  UnderFileSystemConfiguration conf) throws Exception {
 
     String bucketName = uri.getHost();
 
-    Preconditions.checkArgument(Configuration.containsKey(PropertyKey.TXCOS_APPID),
-        "Property " + PropertyKey.TXCOS_APPID + " is required to connect to TXCOS");
-    Preconditions.checkArgument(Configuration.containsKey(PropertyKey.TXCOS_ACCESS_KEY),
-        "Property " + PropertyKey.TXCOS_ACCESS_KEY + " is required to connect to TXCOS");
-    Preconditions.checkArgument(Configuration.containsKey(PropertyKey.TXCOS_SECRET_KEY),
-        "Property " + PropertyKey.TXCOS_SECRET_KEY + " is required to connect to TXCOS");
-    Preconditions.checkArgument(Configuration.containsKey(PropertyKey.TXCOS_ZONE),
-        "Property " + PropertyKey.TXCOS_ZONE + " is required to connect to TXCOS");
+    Preconditions.checkArgument(Configuration.containsKey(PropertyKey.KS3_ACCESS_KEY),
+        "Property " + PropertyKey.KS3_ACCESS_KEY + " is required to connect to KS3");
+    Preconditions.checkArgument(Configuration.containsKey(PropertyKey.KS3_SECRET_KEY),
+        "Property " + PropertyKey.KS3_SECRET_KEY + " is required to connect to KS3");
+    Preconditions.checkArgument(Configuration.containsKey(PropertyKey.KS3_ZONE),
+        "Property " + PropertyKey.KS3_ZONE + " is required to connect to KS3");
 
-    String appId = Configuration.get(PropertyKey.TXCOS_APPID);
-    String accessId = Configuration.get(PropertyKey.TXCOS_ACCESS_KEY);
-    String accessKey = Configuration.get(PropertyKey.TXCOS_SECRET_KEY);
-    String zone = Configuration.get(PropertyKey.TXCOS_ZONE);
+    String accessId = Configuration.get(PropertyKey.KS3_ACCESS_KEY);
+    String accessKey = Configuration.get(PropertyKey.KS3_SECRET_KEY);
+    String zone = Configuration.get(PropertyKey.KS3_ZONE);
 
-    // get TXCOS service
-    COSCredentials cred = new BasicCOSCredentials(accessId, accessKey);
-    ClientConfig clientConfig = new ClientConfig(new Region(zone));
-    COSClient cosclient = new COSClient(cred, clientConfig);
+    // get KS3 service
+    Ks3ClientConfig config = new Ks3ClientConfig();
+    if(zone.equals("ks3-cn-beijing")){
+      config.setEndpoint("ks3-cn-beijing.ksyun.com");
+    }else if(zone.equals("ks3-cn-shanghai")){
+      config.setEndpoint("ks3-cn-shanghai.ksyun.com");
+    }else if(zone.equals("ks3-cn-hk-1")){
+      config.setEndpoint("ks3-cn-hk-1.ksyun.com");
+    }
+    config.setDomainMode(false);
+    config.setProtocol(PROTOCOL.http);
+    config.setPathStyleAccess(false);
+    HttpClientConfig hconfig = new HttpClientConfig();
+    config.setHttpClientConfig(hconfig);
+    Ks3 ks3client = new Ks3Client(accessId,accessKey,config);
 
-    // get TXCOS owner
+    // get KS3 owner
     //String bucketNameInternal = new StringBuilder().append(bucketName).append("-").append(appId).toString();
-    AccessControlList aclGet = cosclient.getBucketAcl(bucketName);
-    List<Grant> grants = aclGet.getGrantsAsList();
-    String owner = grants.get(0).getGrantee().getIdentifier();
+    AccessControlPolicy aclGet = null;
+    aclGet = ks3client.getBucketACL(bucketName);
+    String owner = aclGet.getOwner().getId();
 
     // Default to readable and writable by the user.
     short bucketMode = (short) 700;
 
-    return new TXCOSUnderFileSystem(uri, cosclient, bucketName, owner, bucketMode, conf);
+    return new KS3UnderFileSystem(uri, ks3client, bucketName, owner, bucketMode, conf);
   }
 
   /**
@@ -119,9 +131,9 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
    * @param mOwner
    * @param mBucketMode
    */
-  protected TXCOSUnderFileSystem(AlluxioURI uri, COSClient mClient,
-      String mBucketName, String mOwner, short mBucketMode,
-      UnderFileSystemConfiguration conf) {
+  protected KS3UnderFileSystem(AlluxioURI uri, Ks3 mClient,
+                               String mBucketName, String mOwner, short mBucketMode,
+                               UnderFileSystemConfiguration conf) {
     super(uri, conf);
     this.mClient = mClient;
     this.mBucketName = mBucketName;
@@ -131,14 +143,14 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
 
   @Override
   public String getUnderFSType() {
-    return "txcos";
+    return "ks3";
   }
 
-  // Setting TXCOS owner via Alluxio is not supported yet. This is a no-op.
+  // Setting KS3 owner via Alluxio is not supported yet. This is a no-op.
   @Override
   public void setOwner(String path, String owner, String group) {}
 
-  // Setting TXCOS mode via Alluxio is not supported yet. This is a no-op.
+  // Setting KS3 mode via Alluxio is not supported yet. This is a no-op.
   @Override
   public void setMode(String path, short mode) throws IOException {}
 
@@ -150,7 +162,7 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
       objMeta.setContentMD5(DIR_HASH);
       mClient.putObject(mBucketName, key, new ByteArrayInputStream(new byte[0]), objMeta);
       return true;
-    } catch (CosClientException e) {
+    } catch (Ks3ClientException e) {
       LOG.error("Failed to create object: {}", key, e);
       return false;
     }
@@ -158,7 +170,7 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
 
   @Override
   protected OutputStream createObject(String key) throws IOException {
-    return new TXCOSOutputStream(mBucketName, key, mClient);
+    return new KS3OutputStream(mBucketName, key, mClient);
   }
 
   @Override
@@ -167,7 +179,7 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
       LOG.info("Copying {} to {}", src, dst);
       mClient.copyObject(mBucketName, src, mBucketName, dst);
       return true;
-    } catch (CosClientException e) {
+    } catch (Ks3ClientException e) {
       LOG.error("Failed to rename file {} to {}", src, dst, e);
       return false;
     }
@@ -177,7 +189,7 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
   protected boolean deleteObject(String key) throws IOException {
     try {
       mClient.deleteObject(mBucketName, key);
-    } catch (CosClientException e) {
+    } catch (Ks3ClientException e) {
       LOG.error("Failed to delete {}", key, e);
       return false;
     }
@@ -187,12 +199,15 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
   @Override
   protected ObjectStatus getObjectStatus(String key) {
     try {
-      ObjectMetadata meta = mClient.getObjectMetadata(mBucketName, key);
+      GetObjectRequest request = new GetObjectRequest(mBucketName,key);
+      GetObjectResult result = mClient.getObject(request);
+      Ks3Object object = result.getObject();
+      ObjectMetadata meta = object.getObjectMetadata();
       if (meta == null) {
         return null;
       }
       return new ObjectStatus(key, meta.getContentLength(), meta.getLastModified().getTime());
-    } catch (CosServiceException e) {
+    } catch (Ks3ServiceException e) {
       LOG.warn("Failed to get Object {}, return null", key, e);
       return null;
     }
@@ -210,15 +225,16 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
     key = PathUtils.normalizePath(key, PATH_SEPARATOR);
     // In case key is root (empty string) do not normalize prefix
     key = key.equals(PATH_SEPARATOR) ? "" : key;
-    ListObjectsRequest request = new ListObjectsRequest();
-    request.setBucketName(mBucketName);
-    request.setPrefix(key);
-    request.setMaxKeys(getListingChunkLength());
-    request.setDelimiter(delimiter);
 
-    ObjectListing result = getObjectListingChunk(request);
+    ListObjectsRequest request = new ListObjectsRequest(mBucketName);
+    request.setMaxKeys(getListingChunkLength());
+    request.setPrefix(key);
+    request.setDelimiter(delimiter);
+    ObjectListing result = null;
+    result = mClient.listObjects(request);
+
     if (result != null) {
-      return new TXCOSObjectListingChunk(request, result);
+      return new KS3ObjectListingChunk(request, result);
     }
     return null;
   }
@@ -228,7 +244,7 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
     ObjectListing result;
     try {
       result = mClient.listObjects(request);
-    } catch (CosServiceException e) {
+    } catch (Ks3ServiceException e) {
       LOG.error("Failed to list path {}", request.getPrefix(), e);
       result = null;
     }
@@ -236,27 +252,27 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
   }
 
   /**
-   * Wrapper over TXCOS {@link TXCOSObjectListingChunk}.
+   * Wrapper over KS3 {@link KS3ObjectListingChunk}.
    */
-  private final class TXCOSObjectListingChunk implements ObjectListingChunk {
+  private final class KS3ObjectListingChunk implements ObjectListingChunk {
     final ListObjectsRequest mRequest;
     final ObjectListing mResult;
 
-    TXCOSObjectListingChunk(ListObjectsRequest request, ObjectListing result)
+    KS3ObjectListingChunk(ListObjectsRequest request, ObjectListing result)
         throws IOException {
       mRequest = request;
       mResult = result;
       if (mResult == null) {
-        throw new IOException("TXCOS listing result is null");
+        throw new IOException("KS3 listing result is null");
       }
     }
 
     @Override
     public ObjectStatus[] getObjectStatuses() {
-      List<COSObjectSummary> objects = mResult.getObjectSummaries();
+      List<Ks3ObjectSummary> objects = mResult.getObjectSummaries();
       ObjectStatus[] ret = new ObjectStatus[objects.size()];
       int i = 0;
-      for (COSObjectSummary obj : objects) {
+      for (Ks3ObjectSummary obj : objects) {
         ret[i++] = new ObjectStatus(obj.getKey(), obj.getSize(), obj.getLastModified().getTime());
       }
       return ret;
@@ -273,7 +289,7 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
       if (mResult.isTruncated()) {
         ObjectListing nextResult = mClient.listObjects(mRequest);
         if (nextResult != null) {
-          return new TXCOSObjectListingChunk(mRequest, nextResult);
+          return new KS3ObjectListingChunk(mRequest, nextResult);
         }
       }
       return null;
@@ -287,14 +303,14 @@ public class TXCOSUnderFileSystem extends ObjectUnderFileSystem {
 
   @Override
   protected String getRootKey() {
-    return Constants.HEADER_TXCOS + mBucketName;
+    return Constants.HEADER_KS3 + mBucketName;
   }
 
   @Override
   protected InputStream openObject(String key, OpenOptions options) throws IOException {
     try {
-      return new TXCOSInputStream(mBucketName, key, mClient, options.getOffset());
-    } catch (CosServiceException e) {
+      return new KS3InputStream(mBucketName, key, mClient, options.getOffset());
+    } catch (Ks3ServiceException e) {
       throw new IOException(e.getMessage());
     }
   }
