@@ -9,7 +9,7 @@
  * See the NOTICE file distributed with this work for information regarding copyright ownership.
  */
 
-package alluxio.underfs.txcos;
+package alluxio.underfs.ks3;
 
 import alluxio.AlluxioURI;
 import alluxio.Constants;
@@ -26,44 +26,43 @@ import java.io.IOException;
 import javax.annotation.concurrent.ThreadSafe;
 
 /**
- * Factory for creating {@link TXCOSUnderFileSystem}. It will ensure TXCOS credentials are
+ * Factory for creating {@link KS3UnderFileSystem}. It will ensure KS3 credentials are
  * present before returning a client. The validity of the credentials is checked by the client.
  */
 @ThreadSafe
-public class TXCOSUnderFileSystemFactory implements UnderFileSystemFactory {
+public class KS3UnderFileSystemFactory implements UnderFileSystemFactory {
 
   /**
-   * Constructs a new {@link TXCOSUnderFileSystemFactory}.
+   * Constructs a new {@link KS3UnderFileSystemFactory}.
    */
-  public TXCOSUnderFileSystemFactory() {}
+  public KS3UnderFileSystemFactory() {}
 
   @Override
   public UnderFileSystem create(String path, UnderFileSystemConfiguration conf) {
     Preconditions.checkNotNull(path, "path");
 
-    if (checkTXCOSCredentials(conf)) {
+    if (checkKS3Credentials(conf)) {
       try {
-        return TXCOSUnderFileSystem.createInstance(new AlluxioURI(path), conf);
+        return KS3UnderFileSystem.createInstance(new AlluxioURI(path), conf);
       } catch (Exception e) {
         throw Throwables.propagate(e);
       }
     }
 
-    String err = "TXCOS Credentials not available, cannot create TXCOS Under File System.";
+    String err = "KS3 Credentials not available, cannot create KS3 Under File System.";
     throw Throwables.propagate(new IOException(err));
   }
 
   @Override
   public boolean supportsPath(String path) {
-    return path != null && path.startsWith(Constants.HEADER_TXCOS);
+    return path != null && path.startsWith(Constants.HEADER_KS3);
   }
 
   /**
    * @return true if both access and secret key are present, false otherwise
    */
-  private boolean checkTXCOSCredentials(UnderFileSystemConfiguration conf) {
-    return conf.containsKey(PropertyKey.TXCOS_ACCESS_KEY)
-        && conf.containsKey(PropertyKey.TXCOS_SECRET_KEY)
-        && conf.containsKey(PropertyKey.TXCOS_APPID);
+  private boolean checkKS3Credentials(UnderFileSystemConfiguration conf) {
+    return conf.containsKey(PropertyKey.KS3_ACCESS_KEY)
+        && conf.containsKey(PropertyKey.KS3_SECRET_KEY);
   }
 }

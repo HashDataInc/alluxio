@@ -11,6 +11,7 @@
 
 package alluxio.underfs.txcos;
 
+import alluxio.underfs.txcos.TXCOSOutputStream;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.exception.*;
 import com.qcloud.cos.model.*;
@@ -31,7 +32,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.security.DigestOutputStream;

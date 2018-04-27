@@ -182,6 +182,9 @@ public class PropertyKey {
   public static final PropertyKey TXCOS_ACCESS_KEY = create(Name.TXCOS_ACCESS_KEY, null);
   public static final PropertyKey TXCOS_SECRET_KEY = create(Name.TXCOS_SECRET_KEY, null);
   public static final PropertyKey TXCOS_ZONE = create(Name.TXCOS_ZONE, null);
+  public static final PropertyKey KS3_ACCESS_KEY = create(Name.KS3_ACCESS_KEY, null);
+  public static final PropertyKey KS3_SECRET_KEY = create(Name.KS3_SECRET_KEY, null);
+  public static final PropertyKey KS3_ZONE = create(Name.KS3_ZONE, null);
 
   //
   // Mount table related properties
@@ -832,6 +835,9 @@ public class PropertyKey {
     public static final String TXCOS_ACCESS_KEY = "fs.txcos.accessKeyId";
     public static final String TXCOS_SECRET_KEY = "fs.txcos.secretAccessKey";
     public static final String TXCOS_ZONE = "fs.txcos.zone";
+    public static final String KS3_ACCESS_KEY = "fs.ks3.accessKeyId";
+    public static final String KS3_SECRET_KEY = "fs.ks3.secretAccessKey";
+    public static final String KS3_ZONE = "fs.ks3.zone";
 
     //
     // Master related properties

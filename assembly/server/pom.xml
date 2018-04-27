@@ -92,6 +92,11 @@
     </dependency>
     <dependency>
       <groupId>org.alluxio</groupId>
+      <artifactId>alluxio-underfs-ks3</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.alluxio</groupId>
       <artifactId>alluxio-underfs-s3</artifactId>
       <version>${project.version}</version>
     </dependency>

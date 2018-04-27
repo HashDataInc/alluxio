@@ -15,6 +15,7 @@ import alluxio.AlluxioURI;
 import alluxio.underfs.UnderFileSystemConfiguration;
 import alluxio.underfs.options.DeleteOptions;
 
+import alluxio.underfs.txcos.TXCOSUnderFileSystem;
 import com.qcloud.cos.COSClient;
 import com.qcloud.cos.exception.*;
 import com.qcloud.cos.model.*;
@@ -25,10 +26,8 @@ import org.junit.Test;
 import org.mockito.Matchers;
 import org.mockito.Mockito;
 
-import java.io.IOException;
-
 /**
- * Unit tests for the {@link alluxio.underfs.txcos.TXCOSUnderFileSystem}.
+ * Unit tests for the {@link TXCOSUnderFileSystem}.
  */
 public class TXCOSUnderFileSystemTest {
 

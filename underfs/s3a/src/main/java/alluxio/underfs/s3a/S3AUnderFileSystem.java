@@ -33,6 +33,7 @@ import com.amazonaws.auth.DefaultAWSCredentialsProviderChain;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.S3ClientOptions;
 import com.amazonaws.services.s3.internal.Mimetypes;
+import com.amazonaws.services.s3.internal.ServiceUtils;
 import com.amazonaws.services.s3.model.AccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
@@ -46,6 +47,7 @@ import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerConfiguration;
+import com.amazonaws.util.AwsHostNameUtils;
 import com.amazonaws.util.Base64;
 import com.google.common.base.Preconditions;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -174,6 +176,10 @@ public class S3AUnderFileSystem extends ObjectUnderFileSystem {
     // Set a custom endpoint.
     if (conf.containsKey(PropertyKey.UNDERFS_S3_ENDPOINT)) {
       amazonS3Client.setEndpoint(conf.getValue(PropertyKey.UNDERFS_S3_ENDPOINT));
+      if (!ServiceUtils.isS3USStandardEndpoint(conf.getValue(PropertyKey.UNDERFS_S3_ENDPOINT))) {
+        String clientRegion = AwsHostNameUtils.parseRegionName(conf.getValue(PropertyKey.UNDERFS_S3_ENDPOINT), "s3");
+        LOG.warn(" THE REGION = {}", clientRegion);
+      }
     }
     // Disable DNS style buckets, this enables path style requests.
     if (Boolean.parseBoolean(conf.getValue(PropertyKey.UNDERFS_S3_DISABLE_DNS_BUCKETS))) {

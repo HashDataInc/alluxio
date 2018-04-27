@@ -14,6 +14,7 @@ package alluxio.underfs.txcos;
 import alluxio.underfs.UnderFileSystemFactory;
 import alluxio.underfs.UnderFileSystemFactoryRegistry;
 
+import alluxio.underfs.txcos.TXCOSUnderFileSystemFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -23,11 +24,11 @@ import org.junit.Test;
 public class TXCOSUnderFileSystemFactoryTest {
 
   /**
-   * Tests that the TXCOS UFS module correctly accepts paths that begin with txcos://.
+   * Tests that the TXCOS UFS module correctly accepts paths that begin with ks3://.
    */
   @Test
   public void factory() {
-    UnderFileSystemFactory factory = UnderFileSystemFactoryRegistry.find("txcos://test-bucket/path");
+    UnderFileSystemFactory factory = UnderFileSystemFactoryRegistry.find("ks3://test-bucket/path");
 
     Assert.assertNotNull(
         "A UnderFileSystemFactory should exist for TXCOS paths when using this module", factory);
