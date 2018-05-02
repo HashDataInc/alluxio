@@ -30,6 +30,7 @@ import com.ksyun.ks3.service.Ks3ClientConfig.PROTOCOL;
 import com.ksyun.ks3.service.Ks3;
 import com.ksyun.ks3.http.HttpClientConfig;
 import com.ksyun.ks3.service.request.GetObjectRequest;
+import com.ksyun.ks3.service.request.HeadObjectRequest;
 import com.ksyun.ks3.utils.Base64;
 import com.ksyun.ks3.exception.Ks3ClientException;
 import com.ksyun.ks3.service.request.ListObjectsRequest;
@@ -199,16 +200,17 @@ public class KS3UnderFileSystem extends ObjectUnderFileSystem {
   @Override
   protected ObjectStatus getObjectStatus(String key) {
     try {
-      GetObjectRequest request = new GetObjectRequest(mBucketName,key);
-      GetObjectResult result = mClient.getObject(request);
-      Ks3Object object = result.getObject();
-      ObjectMetadata meta = object.getObjectMetadata();
+      HeadObjectRequest request = new HeadObjectRequest(mBucketName,key);
+      HeadObjectResult result = mClient.headObject(request);
+      if (result == null) {
+        return null;
+      }
+      ObjectMetadata meta = result.getObjectMetadata();
       if (meta == null) {
         return null;
       }
       return new ObjectStatus(key, meta.getContentLength(), meta.getLastModified().getTime());
     } catch (Ks3ServiceException e) {
-      LOG.warn("Failed to get Object {}, return null", key, e);
       return null;
     }
   }
@@ -230,9 +232,9 @@ public class KS3UnderFileSystem extends ObjectUnderFileSystem {
     request.setMaxKeys(getListingChunkLength());
     request.setPrefix(key);
     request.setDelimiter(delimiter);
-    ObjectListing result = null;
-    result = mClient.listObjects(request);
 
+    ObjectListing result = null;
+    result = getObjectListingChunk(request);
     if (result != null) {
       return new KS3ObjectListingChunk(request, result);
     }
@@ -272,6 +274,7 @@ public class KS3UnderFileSystem extends ObjectUnderFileSystem {
       List<Ks3ObjectSummary> objects = mResult.getObjectSummaries();
       ObjectStatus[] ret = new ObjectStatus[objects.size()];
       int i = 0;
+      
       for (Ks3ObjectSummary obj : objects) {
         ret[i++] = new ObjectStatus(obj.getKey(), obj.getSize(), obj.getLastModified().getTime());
       }
