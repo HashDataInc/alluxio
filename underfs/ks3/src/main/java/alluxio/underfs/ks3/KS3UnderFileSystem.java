@@ -235,7 +235,6 @@ public class KS3UnderFileSystem extends ObjectUnderFileSystem {
 
     ObjectListing result = null;
     result = getObjectListingChunk(request);
-
     if (result != null) {
       return new KS3ObjectListingChunk(request, result);
     }
@@ -275,7 +274,7 @@ public class KS3UnderFileSystem extends ObjectUnderFileSystem {
       List<Ks3ObjectSummary> objects = mResult.getObjectSummaries();
       ObjectStatus[] ret = new ObjectStatus[objects.size()];
       int i = 0;
-
+      
       for (Ks3ObjectSummary obj : objects) {
         ret[i++] = new ObjectStatus(obj.getKey(), obj.getSize(), obj.getLastModified().getTime());
       }
